@@ -91,9 +91,10 @@ async function validateEnvironment(projectPath: string): Promise<void> {
     errors.push('Git is not installed');
   }
 
-  // Verify project directory exists
+  // Create project directory if it doesn't exist
   if (!await fs.pathExists(projectPath)) {
-    errors.push(`Project directory does not exist: ${projectPath}`);
+    logger.info(`Creating project directory: ${projectPath}`);
+    await fs.ensureDir(projectPath);
   }
 
   if (errors.length > 0) {

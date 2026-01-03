@@ -35,11 +35,11 @@ export async function promptForMissingOptions(options: PromptOptions): Promise<P
       message: 'Project path:',
       default: process.cwd(),
       validate: (input: string) => {
-        const resolved = path.resolve(input);
-        if (fs.pathExistsSync(resolved)) {
-          return true;
+        if (!input || input.trim() === '') {
+          return 'Project path cannot be empty';
         }
-        return `Path does not exist: ${input}`;
+        // Don't validate if path exists - user might want to create a new project
+        return true;
       }
     });
   }
