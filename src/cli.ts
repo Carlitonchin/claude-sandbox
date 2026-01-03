@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import { execSync } from 'child_process';
 import { DockerContainerManager } from './docker/container-manager.js';
 import { ClaudeConfigManager } from './config/claude-config.js';
+import { SandboxConfigManager } from './config/sandbox-config.js';
 import { GitWorktreeManager } from './git/worktree-manager.js';
 import { logger } from './utils/logger.js';
 
@@ -47,6 +48,14 @@ export async function createSandbox(projectPath: string, options: SandboxOptions
       envVars,
       verbose: options.verbose
     });
+
+    // Step 4.5: Execute pre-configuration commands from .claude-sandbox/settings.json
+    const sandboxConfigManager = new SandboxConfigManager(worktreeDir || resolvedPath);
+    const sandboxConfig = await sandboxConfigManager.loadConfig();
+
+    if (sandboxConfig?.commands && sandboxConfig.commands.length > 0) {
+      await containerManager.executeCommands(container.id, sandboxConfig.commands);
+    }
 
     // Step 5: Attach interactive terminal
     await containerManager.attachTerminal(container.id);

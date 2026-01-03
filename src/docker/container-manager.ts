@@ -109,6 +109,30 @@ export class DockerContainerManager {
     });
   }
 
+  async executeCommands(containerId: string, commands: string[]): Promise<void> {
+    const { execSync } = await import('child_process');
+
+    for (const command of commands) {
+      logger.info(`Ejecutando .... ${command}`);
+
+      try {
+        execSync(`docker exec ${containerId} /bin/bash -c "${command.replace(/"/g, '\\"')}"`, {
+          stdio: process.env.DEBUG ? 'inherit' : 'pipe',
+          encoding: 'utf-8'
+        });
+        logger.success(`Command completed: ${command}`);
+      } catch (error: any) {
+        const exitCode = error.status || 1;
+        const output = error.stdout || error.stderr || '';
+        logger.warn(`Command failed with exit code ${exitCode}: ${command}`);
+        if (output.trim()) {
+          logger.warn(`Output: ${output.trim()}`);
+        }
+        // Continue with next command
+      }
+    }
+  }
+
   async stopContainer(containerId: string): Promise<void> {
     logger.info('Stopping container...');
     const container = this.docker.getContainer(containerId);
