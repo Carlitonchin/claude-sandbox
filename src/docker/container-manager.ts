@@ -96,6 +96,13 @@ export class DockerContainerManager {
     });
   }
 
+  async stopContainer(containerId: string): Promise<void> {
+    logger.info('Stopping container...');
+    const container = this.docker.getContainer(containerId);
+    await container.stop();
+    logger.success('Container stopped');
+  }
+
   async removeContainer(containerId: string): Promise<void> {
     logger.info('Removing container...');
     const container = this.docker.getContainer(containerId);

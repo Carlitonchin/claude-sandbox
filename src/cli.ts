@@ -58,6 +58,7 @@ export async function createSandbox(projectPath: string, options: SandboxOptions
 
     // Step 7: Cleanup (if not preserving container)
     if (!options.preserveContainer) {
+      await containerManager.stopContainer(container.id);
       await containerManager.removeContainer(container.id);
     }
 
