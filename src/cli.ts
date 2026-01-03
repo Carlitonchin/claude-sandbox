@@ -30,7 +30,7 @@ export async function createSandbox(projectPath: string, options: SandboxOptions
 
     // Step 3: Gather Claude Code configurations
     const configManager = new ClaudeConfigManager();
-    const configs = await configManager.collectAllConfigs();
+    const { configs, claudeJson } = await configManager.collectAllConfigs();
 
     // Get environment variables from settings
     const envVars = configs['settings.json']
@@ -43,6 +43,7 @@ export async function createSandbox(projectPath: string, options: SandboxOptions
       name: options.name,
       projectPath: worktreeDir || resolvedPath,
       configs,
+      claudeJson,
       envVars,
       verbose: options.verbose
     });

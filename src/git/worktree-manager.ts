@@ -26,8 +26,8 @@ export class GitWorktreeManager {
     // Extract the final directory name for the branch
     const dirName = path.basename(absoluteWorktreePath);
 
-    // Create a unique branch name using the directory name + timestamp
-    const sandboxBranch = `branch-${dirName}-${timestamp}`;
+    // Create a unique branch name using the directory name
+    const sandboxBranch = `branch-${dirName}`;
 
     // Create worktree with a new branch
     logger.info(`Creating git worktree at ${absoluteWorktreePath}`);

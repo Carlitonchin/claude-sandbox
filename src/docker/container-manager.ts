@@ -8,6 +8,7 @@ interface SandboxConfig {
   name: string;
   projectPath: string;
   configs: Record<string, Buffer>;
+  claudeJson?: Buffer;
   envVars?: string[];
   verbose?: boolean;
 }
@@ -37,6 +38,20 @@ export class DockerContainerManager {
       await fs.writeFile(targetPath, content);
     }
 
+    // Step 2.5: Create temp file for ~/.claude.json if it exists
+    const binds: string[] = [
+      `${config.projectPath}:/workspace:rw`,
+      `${tempConfigDir}:/root/.claude:rw`,
+    ];
+
+    let claudeJsonTempPath: string | undefined;
+    if (config.claudeJson) {
+      claudeJsonTempPath = path.join('/tmp', `claude-sandbox-${config.name}-claude.json`);
+      await fs.writeFile(claudeJsonTempPath, config.claudeJson);
+      // Mount to /root/.claude.json (not inside /root/.claude/)
+      binds.push(`${claudeJsonTempPath}:/root/.claude.json:rw`);
+    }
+
     // Step 3: Create container with volume mounts
     const container = await this.docker.createContainer({
       name: config.name,
@@ -45,10 +60,7 @@ export class DockerContainerManager {
       OpenStdin: true,
       StdinOnce: false,
       HostConfig: {
-        Binds: [
-          `${config.projectPath}:/workspace:rw`,
-          `${tempConfigDir}:/root/.claude:rw`,
-        ],
+        Binds: binds,
         NetworkMode: 'bridge'
       },
       Env: [

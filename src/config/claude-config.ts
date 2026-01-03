@@ -7,14 +7,21 @@ interface ConfigCollection {
   [relativePath: string]: Buffer;
 }
 
+interface ConfigResult {
+  configs: ConfigCollection;
+  claudeJson?: Buffer;
+}
+
 export class ClaudeConfigManager {
   private claudeHome: string;
+  private claudeJsonPath: string;
 
   constructor() {
     this.claudeHome = path.join(os.homedir(), '.claude');
+    this.claudeJsonPath = path.join(os.homedir(), '.claude.json');
   }
 
-  async collectAllConfigs(): Promise<ConfigCollection> {
+  async collectAllConfigs(): Promise<ConfigResult> {
     const configs: ConfigCollection = {};
 
     if (!await fs.pathExists(this.claudeHome)) {
@@ -39,9 +46,16 @@ export class ClaudeConfigManager {
       }
     }
 
-    logger.info(`Collected ${Object.keys(configs).length} configuration files`);
+    // Also collect ~/.claude.json if it exists (separate from configs)
+    let claudeJson: Buffer | undefined;
+    if (await fs.pathExists(this.claudeJsonPath)) {
+      claudeJson = await fs.readFile(this.claudeJsonPath);
+      logger.debug('Collected config: .claude.json (from home directory)');
+    }
 
-    return configs;
+    logger.info(`Collected ${Object.keys(configs).length} configuration files${claudeJson ? ' plus ~/.claude.json' : ''}`);
+
+    return { configs, claudeJson };
   }
 
   private async collectDirectory(dirPath: string, prefix: string): Promise<ConfigCollection> {
