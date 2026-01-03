@@ -1,5 +1,6 @@
 import inquirer from 'inquirer';
 import path from 'path';
+import fs from 'fs-extra';
 import { logger } from './logger.js';
 
 export interface PromptOptions {
@@ -11,14 +12,32 @@ export interface PromptOptions {
   verbose?: boolean;
 }
 
+// Default values when prompts can't be shown
+function getDefaults(): PromptOptions {
+  return {
+    projectPath: process.cwd(),
+    name: `claude-sandbox-${Date.now()}`,
+    worktreePath: undefined,
+    worktree: true,
+    preserveContainer: false,
+    verbose: false
+  };
+}
+
 export async function promptForMissingOptions(options: PromptOptions): Promise<PromptOptions> {
   const answers: any = { ...options };
 
-  // Check if we should prompt (not in verbose mode and not all options provided)
-  const shouldPrompt = !options.verbose && process.stdin.isTTY;
-
-  if (!shouldPrompt) {
-    return options;
+  // Skip prompts in verbose mode
+  if (options.verbose) {
+    // Apply defaults only for missing values
+    return {
+      projectPath: options.projectPath ?? getDefaults().projectPath,
+      name: options.name ?? getDefaults().name,
+      worktreePath: options.worktreePath ?? getDefaults().worktreePath,
+      worktree: options.worktree ?? getDefaults().worktree,
+      preserveContainer: options.preserveContainer ?? getDefaults().preserveContainer,
+      verbose: true
+    };
   }
 
   const questions: any[] = [];
@@ -32,7 +51,6 @@ export async function promptForMissingOptions(options: PromptOptions): Promise<P
       default: process.cwd(),
       validate: (input: string) => {
         const resolved = path.resolve(input);
-        const fs = require('fs-extra');
         if (fs.pathExistsSync(resolved)) {
           return true;
         }
@@ -61,8 +79,9 @@ export async function promptForMissingOptions(options: PromptOptions): Promise<P
     });
   }
 
-  // Worktree path (only if worktree is enabled)
-  if ((options.worktree === true || answers.worktree === true) && !options.worktreePath) {
+  // Worktree path (only if worktree is enabled and not custom path provided)
+  const worktreeEnabled = options.worktree === true;
+  if (worktreeEnabled && !options.worktreePath) {
     questions.push({
       type: 'input',
       name: 'worktreePath',
@@ -81,21 +100,36 @@ export async function promptForMissingOptions(options: PromptOptions): Promise<P
     });
   }
 
-  if (questions.length > 0) {
+  if (questions.length === 0) {
+    // All options provided, return as-is
+    return options;
+  }
+
+  try {
     logger.info('Please provide the following options:');
     const promptedAnswers = await inquirer.prompt(questions);
 
-    // Merge answers
-    answers.projectPath = answers.projectPath || options.projectPath;
-    answers.name = answers.name || options.name;
-    answers.worktreePath = answers.worktreePath || options.worktreePath;
-    if (promptedAnswers.worktree !== undefined) {
-      answers.worktree = promptedAnswers.worktree;
-    }
-    if (promptedAnswers.preserveContainer !== undefined) {
-      answers.preserveContainer = promptedAnswers.preserveContainer;
-    }
-  }
+    // Merge answers with proper defaults
+    const result: PromptOptions = {
+      projectPath: promptedAnswers.projectPath || options.projectPath || getDefaults().projectPath,
+      name: promptedAnswers.name || options.name || getDefaults().name,
+      worktreePath: promptedAnswers.worktreePath || options.worktreePath,
+      worktree: promptedAnswers.worktree !== undefined ? promptedAnswers.worktree : (options.worktree ?? getDefaults().worktree),
+      preserveContainer: promptedAnswers.preserveContainer !== undefined ? promptedAnswers.preserveContainer : (options.preserveContainer ?? getDefaults().preserveContainer),
+      verbose: options.verbose
+    };
 
-  return answers;
+    return result;
+  } catch (error) {
+    // If prompts fail (no TTY), use defaults
+    logger.warn('Could not show prompts, using default values');
+    return {
+      projectPath: options.projectPath || getDefaults().projectPath,
+      name: options.name || getDefaults().name,
+      worktreePath: options.worktreePath,
+      worktree: options.worktree !== undefined ? options.worktree : getDefaults().worktree,
+      preserveContainer: options.preserveContainer !== undefined ? options.preserveContainer : getDefaults().preserveContainer,
+      verbose: options.verbose
+    };
+  }
 }

@@ -20,7 +20,7 @@ export class DockerContainerManager {
   }
 
   async createSandboxContainer(config: SandboxConfig): Promise<Docker.Container> {
-    logger.info('Creating Docker container...');
+    logger.info(`Creating Docker container with name: ${config.name}...`);
 
     // Step 1: Build or get the base image
     const imageName = 'claude-sandbox:latest';
