@@ -20,17 +20,18 @@ export class GitWorktreeManager {
     const timestamp = Date.now();
     const worktreePath = `${worktreeBase}-${timestamp}`;
 
-    // Get current branch
-    const currentBranch = this.getCurrentBranch();
+    // Create a unique branch name for the sandbox
+    const sandboxBranch = `sandbox-${timestamp}`;
 
-    // Create worktree
+    // Create worktree with a new branch
     logger.info(`Creating git worktree at ${worktreePath}`);
     try {
-      execSync(`git worktree add ${worktreePath} ${currentBranch}`, {
+      // Create worktree with a new branch based on current HEAD
+      execSync(`git worktree add -b ${sandboxBranch} ${worktreePath} HEAD`, {
         cwd: this.projectPath,
         stdio: 'inherit'
       });
-      logger.success(`Created worktree at ${worktreePath}`);
+      logger.success(`Created worktree at ${worktreePath} (branch: ${sandboxBranch})`);
     } catch (error) {
       throw new Error(`Failed to create git worktree: ${(error as Error).message}`);
     }
