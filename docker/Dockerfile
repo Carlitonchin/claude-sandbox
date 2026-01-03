@@ -12,21 +12,32 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     python3 \
     python3-pip \
+    sudo \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for Claude Code
+RUN useradd -m -s /bin/bash -u 1000 claude && \
+    echo "claude ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Create workspace directory
 WORKDIR /workspace
 
-# Create .claude directory structure
-RUN mkdir -p /root/.claude /root/.local/bin
+# Create .claude directory structure for the claude user
+RUN mkdir -p /home/claude/.claude /home/claude/.local/bin && \
+    chown -R claude:claude /home/claude
 
 # Set up environment (MUST be before Claude installation)
-ENV PATH="/root/.local/bin:${PATH}"
-ENV HOME="/root"
+ENV PATH="/home/claude/.local/bin:${PATH}"
+ENV HOME="/home/claude"
 
-# Install Claude Code during build
+# Install Claude Code as the claude user
+USER claude
 RUN curl -fsSL https://claude.ai/install.sh | bash && \
     claude --version
+
+# Switch back to root for entrypoint setup
+USER root
 
 # Copy entrypoint script
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh

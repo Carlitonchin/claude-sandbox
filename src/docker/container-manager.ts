@@ -41,15 +41,15 @@ export class DockerContainerManager {
     // Step 2.5: Create temp file for ~/.claude.json if it exists
     const binds: string[] = [
       `${config.projectPath}:/workspace:rw`,
-      `${tempConfigDir}:/root/.claude:rw`,
+      `${tempConfigDir}:/home/claude/.claude:rw`,
     ];
 
     let claudeJsonTempPath: string | undefined;
     if (config.claudeJson) {
       claudeJsonTempPath = path.join('/tmp', `claude-sandbox-${config.name}-claude.json`);
       await fs.writeFile(claudeJsonTempPath, config.claudeJson);
-      // Mount to /root/.claude.json (not inside /root/.claude/)
-      binds.push(`${claudeJsonTempPath}:/root/.claude.json:rw`);
+      // Mount to /home/claude/.claude.json (not inside /home/claude/.claude/)
+      binds.push(`${claudeJsonTempPath}:/home/claude/.claude.json:rw`);
     }
 
     // Step 3: Create container with volume mounts
@@ -59,13 +59,14 @@ export class DockerContainerManager {
       Tty: true,
       OpenStdin: true,
       StdinOnce: false,
+      User: 'claude',
       HostConfig: {
         Binds: binds,
         NetworkMode: 'bridge'
       },
       Env: [
         'WORKSPACE_PATH=/workspace',
-        'CLAUDE_CONFIG_PATH=/root/.claude',
+        'CLAUDE_CONFIG_PATH=/home/claude/.claude',
         ...(config.envVars || [])
       ],
       Cmd: ['/bin/bash'],
@@ -96,7 +97,7 @@ export class DockerContainerManager {
     // Use docker exec to run claude directly
     const { spawn } = await import('child_process');
 
-    const child = spawn('docker', ['exec', '-it', containerId, 'claude'], {
+    const child = spawn('docker', ['exec', '-it', containerId, 'claude', '--dangerously-skip-permissions'], {
       stdio: 'inherit'
     });
 
