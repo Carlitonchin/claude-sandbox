@@ -64,15 +64,22 @@ export class DockerContainerManager {
     await container.start();
     logger.success('Container started');
 
-    // Step 5: Install Claude Code
-    await this.installClaudeCode(container);
-
     return container;
   }
 
   async attachTerminal(containerId: string): Promise<void> {
     logger.info('Attaching interactive terminal...');
     const container = this.docker.getContainer(containerId);
+
+    // Check if we have a TTY
+    const isTTY = process.stdin.isTTY;
+
+    if (!isTTY) {
+      logger.warn('No TTY detected. Container is running in background.');
+      logger.info(`You can attach manually with: docker exec -it ${containerId} bash`);
+      logger.info('Or run this command from a terminal to get interactive session');
+      return;
+    }
 
     // Use docker exec to run bash interactively
     const { spawn } = await import('child_process');
@@ -141,7 +148,7 @@ export class DockerContainerManager {
         '/bin/bash', '-c',
         `
         # Install Claude Code via official script
-        curl -fsSL https://claude.ai/install.sh | sh
+        curl -fsSL https://claude.ai/install.sh | bash
 
         # Verify installation
         export PATH="$HOME/.local/bin:$PATH"
