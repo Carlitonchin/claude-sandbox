@@ -108,6 +108,8 @@ export async function promptForMissingOptions(options: PromptOptions): Promise<P
   } catch (error) {
     // If prompts fail (no TTY), use defaults
     logger.warn('Could not show prompts, using default values');
+    // TODO: Fix type error - options.projectPath could be undefined but path.resolve expects string
+    // error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
     return {
       projectPath: path.resolve(options.projectPath ?? getDefaults().projectPath),
       name: options.name ?? getDefaults().name,

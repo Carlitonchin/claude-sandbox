@@ -34,6 +34,10 @@ program
     // Use resolved project path or default to cwd
     const resolvedProjectPath = finalOptions.projectPath || process.cwd();
 
+    // TODO: Fix type error - finalOptions has optional properties but SandboxOptions requires required properties
+    // error TS2345: Argument of type 'PromptOptions' is not assignable to parameter of type 'SandboxOptions'.
+    // Types of property 'name' are incompatible.
+    // Type 'string | undefined' is not assignable to type 'string'.
     await createSandbox(resolvedProjectPath, finalOptions);
   });
 
