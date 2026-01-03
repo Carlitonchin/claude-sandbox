@@ -39,12 +39,6 @@ export class ClaudeConfigManager {
       }
     }
 
-    // Transform settings.json for Linux if present
-    if (configs['settings.json']) {
-      configs['settings.json'] = this.transformSettings(configs['settings.json']);
-      logger.debug('Transformed settings.json for Linux');
-    }
-
     logger.info(`Collected ${Object.keys(configs).length} configuration files`);
 
     return configs;
@@ -67,52 +61,6 @@ export class ClaudeConfigManager {
     }
 
     return configs;
-  }
-
-  private transformSettings(settingsBuffer: Buffer): Buffer {
-    try {
-      const settings = JSON.parse(settingsBuffer.toString());
-
-      // Remove macOS-specific hooks that won't work in Linux
-      if (settings.hooks) {
-        settings.hooks = this.filterHooksForLinux(settings.hooks);
-      }
-
-      return Buffer.from(JSON.stringify(settings, null, 2));
-    } catch (error) {
-      logger.warn(`Failed to transform settings.json: ${(error as Error).message}`);
-      return settingsBuffer;
-    }
-  }
-
-  private filterHooksForLinux(hooks: any): any {
-    // Filter out macOS-specific commands (afplay, osascript)
-    const filtered = JSON.parse(JSON.stringify(hooks));
-
-    // Recursively filter command hooks
-    const filterCommands = (obj: any): any => {
-      if (Array.isArray(obj)) {
-        return obj.map(filterCommands);
-      } else if (obj && typeof obj === 'object') {
-        if (obj.command) {
-          // Remove macOS-specific commands
-          if (obj.command.includes('afplay') || obj.command.includes('osascript')) {
-            return null;
-          }
-        }
-        const result: any = {};
-        for (const [key, value] of Object.entries(obj)) {
-          const filtered = filterCommands(value);
-          if (filtered !== null) {
-            result[key] = filtered;
-          }
-        }
-        return result;
-      }
-      return obj;
-    };
-
-    return filterCommands(filtered);
   }
 
   getEnvVars(settingsBuffer: Buffer): string[] {
