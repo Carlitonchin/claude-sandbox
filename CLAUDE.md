@@ -1,111 +1,92 @@
----
-description: Use Bun instead of Node.js, npm, pnpm, or vite.
-globs: "*.ts, *.tsx, *.html, *.css, *.js, *.jsx, package.json"
-alwaysApply: false
----
+# CLAUDE.md
 
-Default to using Bun instead of Node.js.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-- Use `bun <file>` instead of `node <file>` or `ts-node <file>`
-- Use `bun test` instead of `jest` or `vitest`
-- Use `bun build <file.html|file.ts|file.css>` instead of `webpack` or `esbuild`
-- Use `bun install` instead of `npm install` or `yarn install` or `pnpm install`
-- Use `bun run <script>` instead of `npm run <script>` or `yarn run <script>` or `pnpm run <script>`
-- Use `bunx <package> <command>` instead of `npx <package> <command>`
-- Bun automatically loads .env, so don't use dotenv.
+## Project Overview
 
-## APIs
+`claude-sandbox` is a CLI tool that creates isolated Docker containers with Claude Code pre-installed and configured. It enables safe experimentation by creating Git worktrees and synchronizing all Claude Code configurations from the host machine into the sandbox.
 
-- `Bun.serve()` supports WebSockets, HTTPS, and routes. Don't use `express`.
-- `bun:sqlite` for SQLite. Don't use `better-sqlite3`.
-- `Bun.redis` for Redis. Don't use `ioredis`.
-- `Bun.sql` for Postgres. Don't use `pg` or `postgres.js`.
-- `WebSocket` is built-in. Don't use `ws`.
-- Prefer `Bun.file` over `node:fs`'s readFile/writeFile
-- Bun.$`ls` instead of execa.
+## Common Commands
 
-## Testing
+```bash
+# Run the CLI in development mode (interactive prompts)
+bun run src/index.ts
 
-Use `bun test` to run tests.
+# Build the project
+bun run build
 
-```ts#index.test.ts
-import { test, expect } from "bun:test";
+# Run tests
+bun test
 
-test("hello world", () => {
-  expect(1).toBe(1);
-});
+# Install dependencies
+bun install
 ```
 
-## Frontend
+## Usage
 
-Use HTML imports with `Bun.serve()`. Don't use `vite`. HTML imports fully support React, CSS, Tailwind.
+```bash
+# Interactive mode (prompts for missing options)
+bun run src/index.ts
 
-Server:
-
-```ts#index.ts
-import index from "./index.html"
-
-Bun.serve({
-  routes: {
-    "/": index,
-    "/api/users/:id": {
-      GET: (req) => {
-        return new Response(JSON.stringify({ id: req.params.id }));
-      },
-    },
-  },
-  // optional websocket support
-  websocket: {
-    open: (ws) => {
-      ws.send("Hello, world!");
-    },
-    message: (ws, message) => {
-      ws.send(message);
-    },
-    close: (ws) => {
-      // handle close
-    }
-  },
-  development: {
-    hmr: true,
-    console: true,
-  }
-})
+# With options
+bun run src/index.ts <project-path> [options]
 ```
 
-HTML files can import .tsx, .jsx or .js files directly and Bun's bundler will transpile & bundle automatically. `<link>` tags can point to stylesheets and Bun's CSS bundler will bundle.
+**Options:**
+- `-n, --name <name>` - Container name
+- `-w, --worktree-path <path>` - Custom worktree location
+- `--no-worktree` - Skip git worktree creation
+- `--preserve-container` - Keep container after exit
+- `-v, --verbose` - Verbose output
 
-```html#index.html
-<html>
-  <body>
-    <h1>Hello, world!</h1>
-    <script type="module" src="./frontend.tsx"></script>
-  </body>
-</html>
-```
+## Architecture
 
-With the following `frontend.tsx`:
+The application follows a layered orchestration pattern:
 
-```tsx#frontend.tsx
-import React from "react";
-import { createRoot } from "react-dom/client";
+1. **Entry Point** (`src/index.ts`): Uses Commander.js for CLI parsing and interactive prompting via Inquirer. Handles option defaults and delegates to `createSandbox()`.
 
-// import .css files directly and it works
-import './index.css';
+2. **Orchestrator** (`src/cli.ts`): The `createSandbox()` function manages the entire workflow:
+   - Environment validation (Docker, Git, Claude Code)
+   - Git worktree creation
+   - Claude config collection
+   - Docker container creation and attachment
+   - Auto-commit on exit
+   - Container cleanup
 
-const root = createRoot(document.body);
+3. **Docker Management** (`src/docker/container-manager.ts`): Wraps Dockerode for:
+   - Building images from `docker/Dockerfile`
+   - Creating containers with volume mounts
+   - Copying configurations into containers
+   - Terminal attachment with stdin/stdout passthrough
 
-export default function Frontend() {
-  return <h1>Hello, world!</h1>;
-}
+4. **Config Collection** (`src/config/claude-config.ts`): Recursively collects all files from `~/.claude/` and `~/.claude.json`, extracts environment variables from `settings.json`.
 
-root.render(<Frontend />);
-```
+5. **Git Worktree** (`src/git/worktree-manager.ts`): Creates isolated worktrees with unique branch names, handles auto-commit on exit.
 
-Then, run index.ts
+6. **Utilities** (`src/utils/`): Colored logging with Chalk (`logger.ts`) and Inquirer-based prompts (`prompts.ts`).
 
-```sh
-bun --hot ./index.ts
-```
+## Docker Container Layout
 
-For more information, read the Bun API docs in `node_modules/bun-types/docs/**.mdx`.
+The container (`docker/Dockerfile`) is based on Debian Bookworm with:
+- Non-root user `claude` (UID 1000) with sudo privileges
+- Claude Code installed via official installer script
+- Workspace mounted at `/workspace`
+- Configs copied to `/home/claude/.claude/`
+- Entrypoint script handles cleanup
+
+## Important Patterns
+
+- **File extensions in imports**: All imports use `.js` extensions (TypeScript compiles to ESM)
+- **Async/await**: All I/O operations use promises via `fs-extra`
+- **Error handling**: Validation throws with descriptive messages; top-level catch in `createSandbox()` exits with code 1
+- **Interactive fallback**: When TTY is unavailable, prompts fall back to defaults
+- **Container naming**: Names use `sandbox-` prefix with random suffix when not specified
+- **Worktree branches**: Format `sandbox/<timestamp>` for uniqueness
+
+## Configuration Sync
+
+The tool synchronizes two types of Claude Code configs:
+1. `~/.claude/` directory (all files recursively)
+2. `~/.claude.json` (single file in home directory)
+
+Environment variables are extracted from `settings.json` under the `env` key and passed to the container.
