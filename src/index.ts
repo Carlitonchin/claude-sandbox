@@ -2,7 +2,6 @@
 import { Command } from 'commander';
 import { createSandbox } from './cli.js';
 import { promptForMissingOptions } from './utils/prompts.js';
-import { logger } from './utils/logger.js';
 
 const program = new Command();
 

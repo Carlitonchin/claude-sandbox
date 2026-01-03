@@ -2,6 +2,7 @@ import path from 'path';
 import { execSync } from 'child_process';
 import fs from 'fs-extra';
 import { logger } from '../utils/logger.js';
+import { generateCommitMessage } from '../utils/claude-commit.js';
 
 export class GitWorktreeManager {
   constructor(private projectPath: string) {}
@@ -60,21 +61,31 @@ export class GitWorktreeManager {
         return;
       }
 
-      // Stage all changes
-      execSync('git add -A', {
-        cwd: worktreePath,
-        stdio: 'inherit'
+      // Let Claude handle git add, git commit, and message generation
+      const { success, message: commitMessage, fallbackUsed } = await generateCommitMessage({
+        worktreePath,
+        timeout: 30000
       });
 
-      // Commit with automatic message
-      const timestamp = new Date().toISOString();
-      const commitMessage = `claude-sandbox: automatic commit [${timestamp}]`;
-      execSync(`git commit -m "${commitMessage}"`, {
-        cwd: worktreePath,
-        stdio: 'inherit'
-      });
+      if (success) {
+        // Claude successfully created the commit
+        logger.success(`Committed changes: ${commitMessage.split('\n')[0]}`);
+      } else {
+        // Fallback: use traditional method with timestamp message
+        logger.debug('Using fallback commit method');
 
-      logger.success(`Committed changes: ${commitMessage}`);
+        execSync('git add -A', {
+          cwd: worktreePath,
+          stdio: 'inherit'
+        });
+
+        execSync(`git commit -m "${commitMessage}"`, {
+          cwd: worktreePath,
+          stdio: 'pipe'
+        });
+
+        logger.success(`Committed changes: ${commitMessage}`);
+      }
     } catch (error) {
       throw new Error(`Failed to commit changes: ${(error as Error).message}`);
     }
