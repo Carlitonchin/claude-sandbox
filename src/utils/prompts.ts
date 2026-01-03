@@ -25,21 +25,6 @@ function getDefaults(): PromptOptions {
 }
 
 export async function promptForMissingOptions(options: PromptOptions): Promise<PromptOptions> {
-  const answers: any = { ...options };
-
-  // Skip prompts in verbose mode
-  if (options.verbose) {
-    // Apply defaults only for missing values
-    return {
-      projectPath: options.projectPath ?? getDefaults().projectPath,
-      name: options.name ?? getDefaults().name,
-      worktreePath: options.worktreePath ?? getDefaults().worktreePath,
-      worktree: options.worktree ?? getDefaults().worktree,
-      preserveContainer: options.preserveContainer ?? getDefaults().preserveContainer,
-      verbose: true
-    };
-  }
-
   const questions: any[] = [];
 
   // Project path
@@ -124,11 +109,11 @@ export async function promptForMissingOptions(options: PromptOptions): Promise<P
     // If prompts fail (no TTY), use defaults
     logger.warn('Could not show prompts, using default values');
     return {
-      projectPath: options.projectPath || getDefaults().projectPath,
-      name: options.name || getDefaults().name,
-      worktreePath: options.worktreePath,
-      worktree: options.worktree !== undefined ? options.worktree : getDefaults().worktree,
-      preserveContainer: options.preserveContainer !== undefined ? options.preserveContainer : getDefaults().preserveContainer,
+      projectPath: options.projectPath ?? getDefaults().projectPath,
+      name: options.name ?? getDefaults().name,
+      worktreePath: options.worktreePath ?? getDefaults().worktreePath,
+      worktree: options.worktree ?? getDefaults().worktree,
+      preserveContainer: options.preserveContainer ?? getDefaults().preserveContainer,
       verbose: options.verbose
     };
   }

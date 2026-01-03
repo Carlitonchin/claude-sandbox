@@ -52,12 +52,12 @@ bun run src/index.ts [project-path] [options]
 - `-w, --worktree-path <path>` - Custom worktree location
 - `--no-worktree` - Skip git worktree creation
 - `--preserve-container` - Keep container after exit
-- `-v, --verbose` - Verbose output (skips interactive prompts)
+- `-v, --verbose` - Verbose output (shows debug logs)
 
 ### Examples
 
 ```bash
-# Use current directory with default options
+# Use current directory (will prompt for missing options)
 bun run src/index.ts
 
 # Specify project path
@@ -72,7 +72,7 @@ bun run src/index.ts . --name my-sandbox
 # Keep container for later inspection
 bun run src/index.ts . --preserve-container
 
-# Verbose mode (no prompts, detailed output)
+# Verbose mode (shows debug logs, still prompts for missing options)
 bun run src/index.ts . -v
 ```
 
