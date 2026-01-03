@@ -93,10 +93,10 @@ export class DockerContainerManager {
       return;
     }
 
-    // Use docker exec to run bash interactively
+    // Use docker exec to run claude directly
     const { spawn } = await import('child_process');
 
-    const child = spawn('docker', ['exec', '-it', containerId, 'bash'], {
+    const child = spawn('docker', ['exec', '-it', containerId, 'claude'], {
       stdio: 'inherit'
     });
 

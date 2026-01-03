@@ -20,9 +20,13 @@ WORKDIR /workspace
 # Create .claude directory structure
 RUN mkdir -p /root/.claude /root/.local/bin
 
-# Set up environment
+# Set up environment (MUST be before Claude installation)
 ENV PATH="/root/.local/bin:${PATH}"
 ENV HOME="/root"
+
+# Install Claude Code during build
+RUN curl -fsSL https://claude.ai/install.sh | bash && \
+    claude --version
 
 # Copy entrypoint script
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
