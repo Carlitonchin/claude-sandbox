@@ -23,8 +23,11 @@ export class GitWorktreeManager {
     // Resolve to absolute path (required for Docker volumes)
     const absoluteWorktreePath = path.resolve(worktreePath);
 
-    // Create a unique branch name for the sandbox
-    const sandboxBranch = `sandbox-${timestamp}`;
+    // Extract the final directory name for the branch
+    const dirName = path.basename(absoluteWorktreePath);
+
+    // Create a unique branch name using the directory name + timestamp
+    const sandboxBranch = `branch-${dirName}-${timestamp}`;
 
     // Create worktree with a new branch
     logger.info(`Creating git worktree at ${absoluteWorktreePath}`);
