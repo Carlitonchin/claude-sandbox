@@ -94,9 +94,9 @@ export async function promptForMissingOptions(options: PromptOptions): Promise<P
     logger.info('Please provide the following options:');
     const promptedAnswers = await inquirer.prompt(questions);
 
-    // Merge answers with proper defaults
+    // Merge answers with proper defaults, resolving paths to absolute
     const result: PromptOptions = {
-      projectPath: promptedAnswers.projectPath || options.projectPath || getDefaults().projectPath,
+      projectPath: path.resolve(promptedAnswers.projectPath || options.projectPath || getDefaults().projectPath),
       name: promptedAnswers.name || options.name || getDefaults().name,
       worktreePath: promptedAnswers.worktreePath || options.worktreePath,
       worktree: promptedAnswers.worktree !== undefined ? promptedAnswers.worktree : (options.worktree ?? getDefaults().worktree),
@@ -109,7 +109,7 @@ export async function promptForMissingOptions(options: PromptOptions): Promise<P
     // If prompts fail (no TTY), use defaults
     logger.warn('Could not show prompts, using default values');
     return {
-      projectPath: options.projectPath ?? getDefaults().projectPath,
+      projectPath: path.resolve(options.projectPath ?? getDefaults().projectPath),
       name: options.name ?? getDefaults().name,
       worktreePath: options.worktreePath ?? getDefaults().worktreePath,
       worktree: options.worktree ?? getDefaults().worktree,

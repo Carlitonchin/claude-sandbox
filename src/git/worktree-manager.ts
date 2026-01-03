@@ -20,23 +20,26 @@ export class GitWorktreeManager {
     const timestamp = Date.now();
     const worktreePath = `${worktreeBase}-${timestamp}`;
 
+    // Resolve to absolute path (required for Docker volumes)
+    const absoluteWorktreePath = path.resolve(worktreePath);
+
     // Create a unique branch name for the sandbox
     const sandboxBranch = `sandbox-${timestamp}`;
 
     // Create worktree with a new branch
-    logger.info(`Creating git worktree at ${worktreePath}`);
+    logger.info(`Creating git worktree at ${absoluteWorktreePath}`);
     try {
       // Create worktree with a new branch based on current HEAD
-      execSync(`git worktree add -b ${sandboxBranch} ${worktreePath} HEAD`, {
+      execSync(`git worktree add -b ${sandboxBranch} ${absoluteWorktreePath} HEAD`, {
         cwd: this.projectPath,
         stdio: 'inherit'
       });
-      logger.success(`Created worktree at ${worktreePath} (branch: ${sandboxBranch})`);
+      logger.success(`Created worktree at ${absoluteWorktreePath} (branch: ${sandboxBranch})`);
     } catch (error) {
       throw new Error(`Failed to create git worktree: ${(error as Error).message}`);
     }
 
-    return worktreePath;
+    return absoluteWorktreePath;
   }
 
   async commitChanges(worktreePath: string): Promise<void> {
