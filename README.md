@@ -111,7 +111,6 @@ Host Machine                              Docker Container
 ```
 
 **Workflow:**
-1. Create worktree → Container mounts it → Work inside → Auto-commit on exit → **Worktree stays for merge**
 
 1. **Validation**: Checks Docker, Git, and Claude Code installation
 2. **Worktree Creation**: Creates an isolated git worktree with a unique branch (`branch-<name-timestamp>`)
