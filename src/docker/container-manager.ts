@@ -1,7 +1,6 @@
 import Docker from 'dockerode';
 import path from 'path';
 import fs from 'fs-extra';
-import tar from 'tar-fs';
 import { logger } from '../utils/logger.js';
 
 interface SandboxConfig {
@@ -291,8 +290,20 @@ echo "[INIT SCRIPT] All commands completed"
 
   private async buildBaseImage(imageName: string): Promise<void> {
     // Check if image exists and if entrypoint has changed
-    const dockerfilePath = path.join(import.meta.dir, '../../docker/Dockerfile');
-    const entrypointPath = path.join(import.meta.dir, '../../docker/entrypoint.sh');
+    // Use realpath to resolve symlinks (important for bun link compatibility)
+    const realDir = await fs.realpath(import.meta.dir);
+
+    // Determine relative path based on execution context:
+    // - bun run dev: file is in src/docker/, need ../../docker/
+    // - bundled: file is in dist/, need ../docker/
+    let relativePath = '../../docker';
+    if (realDir.endsWith('/dist') || realDir.endsWith('\\dist')) {
+      relativePath = '../docker';
+    }
+
+    const dockerfilePath = path.join(realDir, relativePath, 'Dockerfile');
+    const entrypointPath = path.join(realDir, relativePath, 'entrypoint.sh');
+    logger.debug(`dockerfilePath: ${dockerfilePath}`);
 
     try {
       const image = await this.docker.getImage(imageName).inspect();
