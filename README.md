@@ -25,6 +25,20 @@ bun run build
 bun run dev
 ```
 
+## Global Installation
+
+To run `claude-sandbox` from any directory on your system:
+
+```bash
+# From the project directory, link globally
+bun run build
+bun link
+
+# Now you can run from anywhere
+claude-sandbox
+```
+```
+
 ## Usage
 
 ### Interactive Mode (Recommended)
@@ -43,6 +57,10 @@ You'll be prompted for:
 ### Command Line Options
 
 ```bash
+# After global installation
+claude-sandbox [project-path] [options]
+
+# Or from the project directory
 bun run dev [project-path] [options]
 ```
 
@@ -58,19 +76,19 @@ bun run dev [project-path] [options]
 
 ```bash
 # Current directory with prompts
-bun run dev
+claude-sandbox
 
 # Specific project with custom name
-bun run dev ./my-project --name experiment-1
+claude-sandbox ./my-project --name experiment-1
 
 # Skip worktree (useful for read-only exploration)
-bun run dev . --no-worktree
+claude-sandbox . --no-worktree
 
 # Keep container for inspection after exit
-bun run dev . --preserve-container
+claude-sandbox . --preserve-container
 
 # Verbose mode
-bun run dev . -v
+claude-sandbox . -v
 ```
 
 ## How It Works
