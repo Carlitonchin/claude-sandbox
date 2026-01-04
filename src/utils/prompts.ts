@@ -1,6 +1,5 @@
 import inquirer from 'inquirer';
 import path from 'path';
-import fs from 'fs-extra';
 import { logger } from './logger.js';
 
 export interface PromptOptions {
@@ -118,5 +117,37 @@ export async function promptForMissingOptions(options: PromptOptions): Promise<P
       preserveContainer: options.preserveContainer ?? getDefaults().preserveContainer,
       verbose: options.verbose
     };
+  }
+}
+
+export async function promptOnCommandFailure(command: string, exitCode: number): Promise<boolean> {
+  const isTTY = process.stdin.isTTY;
+
+  if (!isTTY) {
+    // No TTY available, default to continuing
+    logger.warn('No TTY detected, continuing despite command failure');
+    return true;
+  }
+
+  try {
+    logger.error('');
+    logger.error(`Command failed: ${command}`);
+    logger.error(`Exit code: ${exitCode}`);
+    logger.error('');
+
+    const answer = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'continue',
+        message: 'Do you want to continue with Claude session?',
+        default: false
+      }
+    ]);
+
+    return answer.continue;
+  } catch (error) {
+    // If prompts fail, default to exiting
+    logger.warn('Could not show prompt, exiting due to command failure');
+    return false;
   }
 }

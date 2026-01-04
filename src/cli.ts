@@ -38,7 +38,12 @@ export async function createSandbox(projectPath: string, options: SandboxOptions
       ? configManager.getEnvVars(configs['settings.json'])
       : [];
 
-    // Step 4: Create and start Docker container
+    // Step 4: Execute pre-configuration commands from .claude-sandbox/settings.json
+    // Always read from the original project path, not the worktree path
+    const sandboxConfigManager = new SandboxConfigManager(resolvedPath);
+    const sandboxConfig = await sandboxConfigManager.loadConfig();
+
+    // Step 5: Create and start Docker container
     const containerManager = new DockerContainerManager();
     const container = await containerManager.createSandboxContainer({
       name: options.name,
@@ -46,21 +51,15 @@ export async function createSandbox(projectPath: string, options: SandboxOptions
       configs,
       claudeJson,
       envVars,
-      verbose: options.verbose
+      verbose: options.verbose,
+      preCommands: sandboxConfig?.commands
     });
 
-    // Step 4.5: Execute pre-configuration commands from .claude-sandbox/settings.json
-    const sandboxConfigManager = new SandboxConfigManager(worktreeDir || resolvedPath);
-    const sandboxConfig = await sandboxConfigManager.loadConfig();
+    // Step 6: Attach interactive terminal
+    const hasPreCommands = sandboxConfig?.commands && sandboxConfig.commands.length > 0;
+    await containerManager.attachTerminal(container.id, hasPreCommands);
 
-    if (sandboxConfig?.commands && sandboxConfig.commands.length > 0) {
-      await containerManager.executeCommands(container.id, sandboxConfig.commands);
-    }
-
-    // Step 5: Attach interactive terminal
-    await containerManager.attachTerminal(container.id);
-
-    // Step 6: Commit changes if worktree was created
+    // Step 7: Commit changes if worktree was created
     if (worktreeDir && options.worktree) {
       const worktreeManager = new GitWorktreeManager(resolvedPath);
       await worktreeManager.commitChanges(worktreeDir);

@@ -27,6 +27,11 @@ WORKDIR /workspace
 RUN mkdir -p /home/claude/.claude /home/claude/.local/bin && \
     chown -R claude:claude /home/claude
 
+# Create initial shell configuration files
+RUN touch /home/claude/.bashrc /home/claude/.profile && \
+    chown claude:claude /home/claude/.bashrc /home/claude/.profile && \
+    chmod 644 /home/claude/.bashrc /home/claude/.profile
+
 # Set up environment (MUST be before Claude installation)
 ENV PATH="/home/claude/.local/bin:${PATH}"
 ENV HOME="/home/claude"
