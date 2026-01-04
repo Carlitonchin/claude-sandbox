@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Run the CLI in development mode (interactive prompts)
-bun run src/index.ts
+bun run dev
 
 # Build the project
 bun run build
@@ -26,10 +26,10 @@ bun install
 
 ```bash
 # Interactive mode (prompts for missing options)
-bun run src/index.ts
+bun run dev
 
 # With options
-bun run src/index.ts <project-path> [options]
+bun run dev <project-path> [options]
 ```
 
 **Options:**
@@ -59,11 +59,17 @@ The application follows a layered orchestration pattern:
    - Copying configurations into containers
    - Terminal attachment with stdin/stdout passthrough
 
-4. **Config Collection** (`src/config/claude-config.ts`): Recursively collects all files from `~/.claude/` and `~/.claude.json`, extracts environment variables from `settings.json`.
+4. **Config Collection** (`src/config/`):
+   - `claude-config.ts`: Recursively collects all files from `~/.claude/` and `~/.claude.json`, extracts environment variables from `settings.json`.
+   - `sandbox-config.ts`: Loads project-specific pre-commands from `.claude-sandbox/settings.json`.
+   - `paths.ts`: Centralized path constants.
 
 5. **Git Worktree** (`src/git/worktree-manager.ts`): Creates isolated worktrees with unique branch names, handles auto-commit on exit.
 
-6. **Utilities** (`src/utils/`): Colored logging with Chalk (`logger.ts`) and Inquirer-based prompts (`prompts.ts`).
+6. **Utilities** (`src/utils/`):
+   - `logger.ts`: Colored logging with Chalk.
+   - `prompts.ts`: Inquirer-based interactive prompts with TTY detection.
+   - `claude-commit.ts`: Intelligent commit message generation using Claude Code.
 
 ## Docker Container Layout
 
@@ -72,7 +78,7 @@ The container (`docker/Dockerfile`) is based on Debian Bookworm with:
 - Claude Code installed via official installer script
 - Workspace mounted at `/workspace`
 - Configs copied to `/home/claude/.claude/`
-- Entrypoint script handles cleanup
+- Entrypoint script (`docker/entrypoint.sh`) sources environment variables and executes pre-commands
 
 ## Important Patterns
 
@@ -80,13 +86,15 @@ The container (`docker/Dockerfile`) is based on Debian Bookworm with:
 - **Async/await**: All I/O operations use promises via `fs-extra`
 - **Error handling**: Validation throws with descriptive messages; top-level catch in `createSandbox()` exits with code 1
 - **Interactive fallback**: When TTY is unavailable, prompts fall back to defaults
-- **Container naming**: Names use `sandbox-` prefix with random suffix when not specified
-- **Worktree branches**: Format `sandbox/<timestamp>` for uniqueness
+- **Container naming**: Names use `sandbox-` prefix with timestamp when not specified
+- **Worktree branches**: Format `branch-<timestamp>` for uniqueness
+- **Image rebuild caching**: Container manager tracks entrypoint checksum to rebuild images only when needed
 
 ## Configuration Sync
 
-The tool synchronizes two types of Claude Code configs:
-1. `~/.claude/` directory (all files recursively)
-2. `~/.claude.json` (single file in home directory)
+The tool synchronizes three types of configurations:
+1. **Host Claude Config**: All files from `~/.claude/` recursively copied to container
+2. **Global Config**: `~/.claude.json` mounted separately
+3. **Project Config**: Pre-commands from `.claude-sandbox/settings.json` (optional)
 
-Environment variables are extracted from `settings.json` under the `env` key and passed to the container.
+Environment variables are extracted from `settings.json` under the `env` key and passed to the container. The entrypoint script sources these from `/etc/sandbox-environment` to make them available in all shell sessions.
